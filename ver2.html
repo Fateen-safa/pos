@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shaikel POS System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <i class="fas fa-cash-register logo-icon"></i>
+                <h1>Shaikel POS System</h1>
+            </div>
+            <div class="language-selector">
+                <button class="lang-btn" data-lang="en">English</button>
+                <button class="lang-btn" data-lang="ar">العربية</button>
+                <button class="lang-btn" data-lang="he">עברית</button>
+            </div>
+        </header>
+
+        <div class="main-content">
+            <div class="left-panel">
+                <div class="panel">
+                    <h2 class="panel-title">
+                        <i class="fas fa-search"></i>
+                        <span data-translate="searchProducts">Search Products</span>
+                    </h2>
+                    <div class="search-box">
+                        <input type="text" id="searchInput" placeholder="Search products...">
+                        <button><i class="fas fa-search"></i></button>
+                    </div>
+
+                    <h2 class="panel-title">
+                        <i class="fas fa-boxes"></i>
+                        <span data-translate="availableProducts">Available Products</span>
+                    </h2>
+                    <div class="products-grid" id="productsGrid">
+                        <!-- Products will be added here dynamically -->
+                    </div>
+                </div>
+
+                <div class="panel inventory-panel">
+                    <h2 class="panel-title">
+                        <i class="fas fa-warehouse"></i>
+                        <span data-translate="inventory">Inventory Management</span>
+                    </h2>
+                    <div class="inventory-list" id="inventoryList">
+                        <!-- Inventory items will be added here dynamically -->
+                    </div>
+
+                    <h3 class="panel-title">
+                        <i class="fas fa-plus-circle"></i>
+                        <span data-translate="addProduct">Add New Product</span>
+                    </h3>
+                    <div class="add-product-form">
+                        <div class="form-group">
+                            <label data-translate="productName">Product Name</label>
+                            <input type="text" id="productName" placeholder="Product name">
+                        </div>
+                        <div class="form-group">
+                            <label data-translate="price">Price</label>
+                            <input type="number" id="productPrice" placeholder="Price" step="0.01">
+                        </div>
+                        <div class="form-group">
+                            <label data-translate="quantity">Quantity</label>
+                            <input type="number" id="productQuantity" placeholder="Quantity">
+                        </div>
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button class="btn btn-primary" id="addProductBtn">
+                                <span data-translate="addProduct">Add Product</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="right-panel">
+                <div class="panel">
+                    <h2 class="panel-title">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span data-translate="shoppingCart">Shopping Cart</span>
+                    </h2>
+                    <div class="cart-items" id="cartItems">
+                        <!-- Cart items will be added here dynamically -->
+                    </div>
+
+                    <div class="cart-total">
+                        <span data-translate="total">Total:</span>
+                        <span class="total-amount" id="cartTotal">0.00 <span class="currency">S</span></span>
+                    </div>
+
+                    <div class="transaction-form">
+                        <div class="form-group">
+                            <label data-translate="customerName">Customer Name</label>
+                            <input type="text" id="customerName" placeholder="Customer name">
+                        </div>
+                        <div class="form-group">
+                            <label data-translate="date">Date</label>
+                            <input type="date" id="transactionDate">
+                        </div>
+                        <div class="form-group">
+                            <label data-translate="status">Status</label>
+                            <select id="transactionStatus">
+                                <option value="pending" data-translate="pending">Pending</option>
+                                <option value="completed" data-translate="completed">Completed</option>
+                                <option value="cancelled" data-translate="cancelled">Cancelled</option>
+
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-primary" id="completeTransactionBtn">
+                            <i class="fas fa-check"></i>
+                            <span data-translate="completeTransaction">Complete Transaction</span>
+                        </button>
+
+                        <button class="btn btn-secondary" id="exportPngBtn">
+                            <i class="fas fa-file-image"></i>
+                            <span data-translate="exportReceipt">Export to PNG</span>
+                        </button>
+
+                        <button class="btn btn-danger" id="clearCartBtn">
+                            <i class="fas fa-trash"></i>
+                            <span data-translate="clearCart">Clear Cart</span>
+                        </button>
+                    </div>
+
+                    <div class="receipt-preview">
+                        <h3 data-translate="receiptPreview">Receipt Preview</h3>
+                        <div id="receiptContent">
+                            <div class="receipt-header">
+                                <h2>aiham karaj</h2>
+                                <p>Barta'a</p>
+                                <p>052-634-3989</p>
+                            </div>
+                            <div class="receipt-items">
+                                <div class="receipt-item">
+                                    <span>Product</span>
+                                    <span>Amount</span>
+                                </div>
+                                <!-- Receipt items will be added here dynamically -->
+                            </div>
+                            <div class="receipt-total">
+                                <span>Total:</span>
+                                <span>0.00 S</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h2 class="panel-title"><i class="fas fa-history"></i> Transaction History</h2>
+        <div id="transactionHistory"></div>
+        <button class="btn btn-secondary" id="exportTransactionsBtn">Export Transactions to Excel</button>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+
+</html>
