@@ -1,18 +1,38 @@
-
+// --------------------------------------------------------------------------------
+// frontend/script.js
+// Purpose: Simple POS frontend script — fetches products/transactions from backend,
+// manages a shopping cart, builds receipts, and lets the user export data.
+// Notes: This file is written in vanilla JS and relies on specific DOM element IDs
+// present in the HTML. Comments below explain important sections and possible
+// pitfalls (ordering, localStorage, id/receipt generation).
+// --------------------------------------------------------------------------------
+// API_BASE URL (backend API endpoint used by fetch wrappers)
+const API_BASE = 'http://localhost:5000/api';
 // Sample product data
-let products = [
-];
+// Application state
+let products = []; // Array of product objects received from backend
 
-let cart = [];
-let currentLanguage = 'en';
-let transactions = [];
-let transactionCounter = 1;
+let cart = []; // Current shopping cart: [{ product, quantity }, ...]
+let currentLanguage = 'en'; // active locale key (en, ar, he)
+let transactions = []; // list of past transactions
+let transactionCounter = 1; // counter used to generate local ids/receipt numbers
 
-// if editing modifies the transaction, call:
-saveTransactions();
-renderTransactions();
+// NOTE: The next two calls saveTransactions() and renderTransactions() were
+// originally placed here in the file. Saving immediately at top-level can
+// overwrite previously stored transactions in localStorage because it runs
+// before we load from storage. We keep them out of the initialization flow —
+// transactions are loaded later in `init()` via `loadTransactions()`.
 
 
+// -------------------------
+// Internationalization strings
+// -------------------------
+// Contains translations for UI labels used via `data-translate` attributes.
+// Add additional languages here. Keys must match `data-translate` values.
+//
+// Example: <button data-translate="addProduct"></button>
+// The `setLanguage()` function swaps those texts at runtime.
+//
 // Language translations
 const translations = {
     en: {
@@ -89,16 +109,26 @@ const translations = {
     }
 };
 
-// DOM Elements
+// -------------------------
+// DOM references
+// -------------------------
+// Cache references to frequently used DOM elements. If any of these IDs
+// are missing from the HTML, the script will throw — defensive checks can be
+// added if you expect the markup to vary.
 const productsGrid = document.getElementById('productsGrid');
 const cartItems = document.getElementById('cartItems');
 const cartTotal = document.getElementById('cartTotal');
 const inventoryList = document.getElementById('inventoryList');
 const receiptContent = document.getElementById('receiptContent');
 
-// Delete Transaction API Call
+// -------------------------
+// API: Transactions
+// -------------------------
+// Functions that talk to the backend for transaction-related operations.
+// They return parsed JSON and throw on non-ok responses so callers can
+// surface errors to the user.
 async function deleteTransactionFromServer(transactionId) {
-    const res = await fetch(`http://127.0.0.1:5000/transactions/${transactionId}`, {
+    const res = await fetch(`${API_BASE}/transactions/${transactionId}`, {
         method: "DELETE"
     });
 
@@ -113,23 +143,17 @@ async function deleteTransactionFromServer(transactionId) {
 
 
 
-// function loadTransactions() {
-//     fetch('/transactions')
-//         .then(response => response.json())
-//         .then(data => {
-//             transactions = data;
-//             renderTransactions();
-//         })
-//         .catch(error => {
-//             console.error('Error loading transactions:', error);
-//         });
-// }
 
 
-// Update stock for a single product
+// -------------------------
+// API: Stock / Products
+// -------------------------
+// `updateProductStock` sends a small payload to update stock on the server.
+// Note: In this codebase the backend is expected to handle stock adjustments
+// when a transaction is saved, so this helper is available for manual updates.
 async function updateProductStock(productId, quantity) {
     try {
-        const res = await fetch("http://127.0.0.1:5000/update_stock", {
+        const res = await fetch(`${API_BASE}/stock/update`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -159,8 +183,9 @@ async function updateProductStock(productId, quantity) {
 
 
 
+// Delete a product record on the server
 async function deleteProductFromServer(productId) {
-    const res = await fetch(`http://127.0.0.1:5000/delete_product/${productId}`, {
+    const res = await fetch(`${API_BASE}/stock/${productId}`, {
         method: "DELETE"
     });
 
@@ -175,15 +200,17 @@ async function deleteProductFromServer(productId) {
 
 
 
+// Fetch latest products list and re-render UI
 async function fetchProducts() {
-    const res = await fetch("http://127.0.0.1:5000/get_stock");
+    const res = await fetch(`${API_BASE}/stock`);
     products = await res.json();
     renderProducts();
     renderInventory();
 }
 
+// Add a product on the server
 async function addProductToServer(product) {
-    const res = await fetch("http://127.0.0.1:5000/add_item", {
+    const res = await fetch(`${API_BASE}/stock`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(product)
@@ -191,8 +218,10 @@ async function addProductToServer(product) {
     return res.json();
 }
 
+// Save a transaction on the server
+// The backend should handle stock adjustments and assign canonical ids.
 async function saveTransactionToServer(transaction) {
-    const res = await fetch("http://127.0.0.1:5000/transactions", {
+    const res = await fetch(`${API_BASE}/transactions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(transaction)
@@ -200,27 +229,33 @@ async function saveTransactionToServer(transaction) {
     return res.json();
 }
 
+// Load transaction history from server
 async function loadTransactions() {
-    const res = await fetch("http://127.0.0.1:5000/transactions");
+    const res = await fetch(`${API_BASE}/transactions`);
     transactions = await res.json();
     renderTransactions();
 }
 
 
 
-// Initialize the application
+// -------------------------
+// Initialization
+// -------------------------
+// `init()` bootstraps the app: fetch products and transactions, attach
+// event listeners, set default language and today's date.
 async function init() {
     await fetchProducts();
     await loadTransactions();
-    //alert(products)
-    //alert(transactions)
     setupEventListeners();
     setLanguage('en');
     const td = new Date().toISOString().substr(0, 10);
     document.getElementById('transactionDate').value = td;
 }
 
-// Render products to the products grid
+// -------------------------
+// Rendering: Products & Inventory
+// -------------------------
+// `renderProducts()` renders clickable product cards that add to the cart
 function renderProducts() {
     productsGrid.innerHTML = '';
     products.forEach(product => {
@@ -236,7 +271,7 @@ function renderProducts() {
     });
 }
 
-// Render inventory list
+// `renderInventory()` shows the admin inventory list with delete controls.
 function renderInventory() {
     inventoryList.innerHTML = '';
     products.forEach(product => {
@@ -253,7 +288,7 @@ function renderInventory() {
                 `;
         inventoryList.appendChild(inventoryItem);
     });
-
+    // removed fteaure to edit products for simplicity
     // // Add event listeners to edit and delete buttons
     // document.querySelectorAll('.edit-btn').forEach(btn => {
     //     btn.addEventListener('click', (e) => {
@@ -272,7 +307,12 @@ function renderInventory() {
 }
 
 
-// Add product to cart
+// -------------------------
+// Cart management
+// -------------------------
+// `addToCart()` and the quantity helpers manage the `cart` array and keep
+// quantities bounded by the product stock. UI updates are handled by
+// `renderCart()` and `updateReceipt()`.
 function addToCart(product) {
     const existingItem = cart.find(item => item.product.id === product.id);
 
@@ -294,7 +334,7 @@ function addToCart(product) {
     updateReceipt();
 }
 
-// Render cart items
+// Render the cart contents and wire the +/- buttons
 function renderCart() {
     cartItems.innerHTML = '';
     cart.forEach(item => {
@@ -334,7 +374,7 @@ function renderCart() {
     });
 }
 
-// Increase item quantity in cart
+// Increase item quantity in cart (respecting stock limits)
 function increaseQuantity(productId) {
     const cartItem = cart.find(item => item.product.id === productId);
     if (cartItem && cartItem.quantity < cartItem.product.stock) {
@@ -345,28 +385,10 @@ function increaseQuantity(productId) {
 }
 
 
-// function editTransaction(id) {
-//     const t = transactions.find(tx => tx.id === id);
-//     if (!t) return;
-
-//     // Reload form data
-//     document.getElementById('customerName').value = t.customerName;
-//     document.getElementById('transactionDate').value = t.date;
-//     document.getElementById('transactionStatus').value = t.status;
-
-//     // Reload products into cart
-//     cart = t.products.map(p => ({
-//         product: { ...p.product },
-//         quantity: p.quantity
-//     }));
-
-//     renderCart();
-//     updateReceipt(t);
-// }
 
 
 
-// Decrease item quantity in cart
+// Decrease item quantity in cart (removes item at 0)
 function decreaseQuantity(productId) {
     const cartItem = cart.find(item => item.product.id === productId);
     if (cartItem) {
@@ -379,29 +401,13 @@ function decreaseQuantity(productId) {
     }
 }
 
-// function renderTransactions() {
-//     const transactionList = document.getElementById('transactionHistory');
-//     if (!transactionList) return;
-    
-//     transactionList.innerHTML = '';
-    
-//     transactions.slice(0, 50).forEach(transaction => {
-//         const div = document.createElement('div');
-//         div.className = 'transaction-item';
-//         div.innerHTML = `
-//             <div class="transaction-header">
-//                 <span class="receipt-number">${transaction.receiptNumber}</span>
-//                 <span class="transaction-date">${new Date(transaction.date).toLocaleDateString()}</span>
-//                 <span class="transaction-total">$${transaction.total.toFixed(2)}</span>
-//             </div>
-//             <div class="transaction-customer">Customer: ${transaction.customerName}</div>
-//             <div class="transaction-items">Items: ${transaction.products.length}</div>
-//         `;
-//         transactionList.appendChild(div);
-//     });
-// }
 
 
+
+// -------------------------
+// Transactions UI
+// -------------------------
+// Render the transaction history panel and bind delete handlers.
 function renderTransactions() {
     const history = document.getElementById('transactionHistory');
     history.innerHTML = '';
@@ -419,13 +425,6 @@ function renderTransactions() {
         history.appendChild(div);
     });
 
-    // // Attach edit/delete events
-    // document.querySelectorAll('.edit-transaction').forEach(btn => {
-    //     btn.addEventListener('click', (e) => {
-    //         const id = parseInt(e.target.dataset.id);
-    //         editTransaction(id);
-    //     });
-    // });
 
     document.querySelectorAll('.delete-transaction').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -436,7 +435,7 @@ function renderTransactions() {
 }
 
 
-// Delete transaction function using the API call
+// Delete a transaction via the backend then remove from local state
 async function deleteTransaction(id) {
     if (!confirm('Are you sure you want to delete this transaction?')) {
         return;
@@ -458,6 +457,11 @@ async function deleteTransaction(id) {
 
 
 
+// -------------------------
+// Receipt rendering
+// -------------------------
+// Builds the HTML for the receipt preview from the `cart` and optional
+// transaction argument (used when showing a saved transaction's receipt).
 function updateReceipt(transaction = null) {
     const customerName = document.getElementById('customerName').value || 'Customer';
     const date = document.getElementById('transactionDate').value;
@@ -498,30 +502,8 @@ function updateReceipt(transaction = null) {
     receiptContent.innerHTML = receiptHTML;
 }
 
-// // Edit product
-// function editProduct(productId) {
-//     const product = products.find(p => p.id === productId);
-//     if (product) {
-//         const newName = prompt('Enter new product name:', product.name);
-//         if (newName === null) return;
 
-//         const newPrice = parseFloat(prompt('Enter new price:', product.price));
-//         if (isNaN(newPrice)) return;
-
-//         const newStock = parseInt(prompt('Enter new stock quantity:', product.stock));
-//         if (isNaN(newStock)) return;
-
-//         product.name = newName;
-//         product.price = newPrice;
-//         product.stock = newStock;
-
-//         renderProducts();
-//         renderInventory();
-//         renderCart();
-//         updateReceipt();
-//     }
-// }
-// Delete product and update UI
+// Delete a product from server + update local UI state
 async function deleteProduct(productId) {
     if (!confirm('Are you sure you want to delete this product?')) return;
 
@@ -541,13 +523,15 @@ async function deleteProduct(productId) {
 
         alert("Product deleted successfully!");
     } catch (err) {
-        console.error("❌ Error deleting product:", err.message);
+        console.error(" Error deleting product:", err.message);
         alert("Error deleting product: " + err.message);
     }
 }
 
 
-// Set language
+// -------------------------
+// Internationalization helper
+// -------------------------
 function setLanguage(lang) {
     currentLanguage = lang;
     document.querySelectorAll('[data-translate]').forEach(element => {
@@ -565,7 +549,12 @@ function setLanguage(lang) {
     document.getElementById('addProductBtn').textContent = translations[lang].addProduct;
 }
 
-// Setup event listeners
+// -------------------------
+// Event wiring
+// -------------------------
+// All DOM event listeners (buttons, search input, language switching)
+// are installed here. Keep this function readable so it's easy to add tests
+// or feature-flag specific handlers.
 function setupEventListeners() {
     // Language switcher
     document.querySelectorAll('.lang-btn').forEach(btn => {
@@ -607,83 +596,59 @@ function setupEventListeners() {
         }
     });
 
-    // Complete transaction button
-    document.getElementById('completeTransactionBtn').addEventListener('click', async () => {
-        if (cart.length === 0) {
-            alert('Cart is empty. Add products to complete transaction.');
-            return;
+    // Complete transaction button - FIXED
+document.getElementById('completeTransactionBtn').addEventListener('click', async () => {
+    if (cart.length === 0) {
+        alert('Cart is empty. Add products to complete transaction.');
+        return;
+    }
+
+    const customerName = document.getElementById('customerName').value || 'Customer';
+    const date = document.getElementById('transactionDate').value;
+    const status = document.getElementById('transactionStatus').value;
+
+    const transaction = {
+        id: transactionCounter++,
+        receiptNumber: `T-${String(transactionCounter).padStart(5, '0')}`,
+        date,
+        customerName,
+        products: [...cart],
+        total: cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0),
+        status
+    };
+
+    try {
+        //  Backend handles stock update automatically!
+        const savedTx = await saveTransactionToServer(transaction);
+        
+        // Update local state
+        transactions.unshift(savedTx);
+        if (transactions.length > 50) {
+            transactions = transactions.slice(0, 50);
         }
 
-        const customerName = document.getElementById('customerName').value || 'Customer';
-        const date = document.getElementById('transactionDate').value;
-        const status = document.getElementById('transactionStatus').value;
-
-
-        const transaction = {
-            id: transactionCounter++,
-            receiptNumber: `T-${String(transactionCounter).padStart(5, '0')}`,
-            date,
-            customerName,
-            products: [...cart],
-            total: cart.reduce((sum, item) => sum + (item.product.price * item.quantity), 0),
-            status
-        };
-        // Modified transaction completion handler
-        saveTransactionToServer(transaction).then(savedTx => {
-            // Add to local transactions array (optional - you can rely on server data)
-            transactions.unshift(savedTx); // Add to beginning to maintain order
-
-            // Keep only last 50 transactions locally
-            if (transactions.length > 50) {
-                transactions = transactions.slice(0, 50);
-            }
-
-            renderTransactions();
-            cart = [];
-            renderCart();
-            fetchProducts(); // reload stock
-            updateReceipt(savedTx);
-            alert("Transaction completed successfully!");
-        }).catch(error => {
-            console.error('Error saving transaction:', error);
-            alert("Error saving transaction: " + error.message);
-        });
-
-
-        // Reduce stock
-        cart.forEach(item => {
-            const product = products.find(p => p.id === item.product.id);
-
-        });
-
-        for (const item of cart) {
-
-            await updateProductStock(item.product.id, item.quantity);
-        }
-
-        // we need to change the stock in the database 
-
-
-    });
-
-
-    /*     // Export receipt button (now exports to PNG)
-        document.getElementById('exportReceiptBtn').addEventListener('click', () => {
-            const receipt = document.getElementById('receiptContent');
-            if (!receipt.innerHTML.trim()) {
-                alert('No receipt to export.');
-                return;
-            }
+        renderTransactions();
+        cart = [];
+        renderCart();
+        fetchProducts(); // Just refresh the view
+        updateReceipt(savedTx);
+        alert("Transaction completed successfully!");
+        
+    } catch (error) {
+        console.error('Error saving transaction:', error);
+        alert("Error saving transaction: " + error.message);
+    }
     
-            html2canvas(receipt).then(canvas => {
-                const link = document.createElement('a');
-                link.download = 'receipt.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            });
-        }); */
+    // ❌❌❌ REMOVE THIS ENTIRE SECTION! ❌❌❌
+    // cart.forEach(item => {
+    //     const product = products.find(p => p.id === item.product.id);
+    // });
+    
+    // for (const item of cart) {
+    //     await updateProductStock(item.product.id, item.quantity); // ❌ DUPLICATE!
+    // }
+});
 
-    // Clear cart button
 
     document.getElementById('clearCartBtn').addEventListener('click', () => {
         if (cart.length === 0) {
@@ -724,6 +689,10 @@ function setupEventListeners() {
     });
 }
 
+// -------------------------
+// Export functionality
+// -------------------------
+// Export transactions to XLSX and receipt preview to PNG.
 document.getElementById('exportTransactionsBtn').addEventListener('click', () => {
     if (transactions.length === 0) {
         alert("No transactions to export.");
@@ -756,6 +725,12 @@ document.getElementById('exportPngBtn').addEventListener('click', () => {
     });
 });
 
+// -------------------------
+// Persistence (localStorage)
+// -------------------------
+// `saveTransactions()` writes the `transactions` array to localStorage so
+// the browser keeps a copy between reloads. We read from storage on load
+// (below) to initialize the local `transactions` array.
 function saveTransactions() {
     localStorage.setItem('transactions', JSON.stringify(transactions));
 }
@@ -763,7 +738,11 @@ function saveTransactions() {
 const savedTransactions = localStorage.getItem('transactions');
 
 if (savedTransactions) {
-    transactions = JSON.parse(savedTransactions);  // ✅ Correct
+    // Load persisted transactions if present. We also set `transactionCounter`
+    // to one more than the max existing id so locally generated ids don't
+    // collide. If your backend assigns canonical ids, you may prefer to
+    // rely solely on server-assigned ids rather than pre-assigning locally.
+    transactions = JSON.parse(savedTransactions);
     if (transactions.length > 0) {
         transactionCounter = Math.max(...transactions.map(t => t.id)) + 1;
     }
