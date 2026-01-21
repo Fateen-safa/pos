@@ -43,6 +43,7 @@ def delete_stock_item(product_id: int):
 	return jsonify({"error": "Product not found"}), 404
 
 @stock_bp.route('/stock/update', methods=['POST'])
+
 def update_stock():
 	db = next(get_db())
 	data = request.json
@@ -63,6 +64,7 @@ def update_stock():
 	return jsonify({"error": "Product not found or insufficient stock"}), 404
 
 @stock_bp.route('/stock/search', methods=['GET'])
+
 def search_stock():
 	db = next(get_db())
 	search_term = request.args.get('q', '')

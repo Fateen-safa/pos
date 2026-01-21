@@ -15,8 +15,8 @@ class Config:
     # #     "DATABASE_URL",
     # #     f"postgresql+psycopg2://{POSTGRES_USER}:{POSTGRES_PASSWORD}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
     # # )
-    #DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://postgres:159357][@localhost:5432/stockdb")
-    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://myuser:mypassword@db:5432/mydatabase")
+    DATABASE_URL = os.getenv("DATABASE_URL", "postgresql+psycopg2://postgres:159357][@localhost:5432/stockdb")
+    #DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://myuser:mypassword@db:5432/mydatabase")
     SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
     DEBUG = os.getenv("DEBUG", True)
 

@@ -244,6 +244,26 @@ async function loadTransactions() {
 // `init()` bootstraps the app: fetch products and transactions, attach
 // event listeners, set default language and today's date.
 async function init() {
+    // Check if user is authenticated via login service
+    try {
+        const authRes = await fetch('http://localhost:5004/api/check-auth', {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'include'
+        });
+        const authData = await authRes.json();
+        
+        if (!authData.authenticated) {
+            console.log("User not authenticated, redirecting to login...");
+            window.location.href = 'http://localhost:5004';
+            return;
+        }
+        console.log("User authenticated:", authData.user.username);
+    } catch (err) {
+        console.error("Auth check failed:", err);
+        // If auth service is down, we might still want to allow access or block it.
+        // For now, let's just log it.
+    }
+
     await fetchProducts();
     await loadTransactions();
     setupEventListeners();

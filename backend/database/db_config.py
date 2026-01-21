@@ -5,7 +5,8 @@ from backend.config import Config
 import os
 
 # Database engine
-DATABASE_URL = os.getenv("DATABASE_URL")
+#DATABASE_URL = os.getenv("DATABASE_URL"( 
+DATABASE_URL = "postgresql+psycopg2://postgres:159357][@localhost:5432/stockdb"
 engine = create_engine(DATABASE_URL)
 
 # Session factory

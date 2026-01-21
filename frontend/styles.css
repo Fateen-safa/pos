@@ -46,6 +46,28 @@
             color: #4CAF50;
         }
         
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .user-actions {
+            display: flex;
+            align-items: center;
+        }
+        
+        .btn-logout {
+            background: #e74c3c !important;
+            color: white !important;
+            padding: 8px 15px !important;
+            font-size: 14px !important;
+        }
+        
+        .btn-logout:hover {
+            background: #c0392b !important;
+        }
+        
         .language-selector {
             display: flex;
             gap: 10px;
